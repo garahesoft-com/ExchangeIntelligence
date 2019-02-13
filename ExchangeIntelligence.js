@@ -6,6 +6,16 @@ var crypto = require('crypto');
 var Fs = require('fs')
 var db = require ("./db.js");
 
+function connectToDb(invoker) {
+    if (db === undefined 
+        || !db.hasOwnProperty('client')
+        || db.client === null
+        || db.status === "disconnected") {
+            db.connect();
+            console.log("DB connection invoked by: " + invoker);
+        }
+}connectToDb("initial");
+
 //Consts
 const DBANGKOFEE = 0.002; //DBangko fee is 0.2% right now
 const RETRYLIMIT = 10; //The number of times to retry on failed operations
@@ -56,7 +66,7 @@ require('seneca')({
                 protocol: "https"
             }
 
-            var callbackRESt = function(response) {
+            callRESt(messageparam, "POST", null, function(response) {
                 var firstObj;
                 for(var key in response) {
                     if(response.hasOwnProperty(key)) {
@@ -69,9 +79,7 @@ require('seneca')({
                     ret.usdrate = firstObj.buy;
 
                 done(null, ret);
-            }
-
-            callRESt(messageparam, "POST", null, callbackRESt);
+            });
         } else {
              console.error("Invalid contents for message");
              done(null, ret);
@@ -90,16 +98,14 @@ require('seneca')({
                 protocol: "https"
             }
 
-            var callbackRESt = function(response) {
+            callRESt(messageparam, "POST", null, function(response) {
                 if (response && response.fee_seller) {
                     ret.percentagefee = response.fee_seller / 100;
                     //ret.dbangkofee = DBANGKOFEE; 
                 }
 
                 done(null, ret);
-            }
-
-            callRESt(messageparam, "POST", null, callbackRESt);
+            });
         } else {
             console.error("Invalid contents for message");
             done(null, ret);
@@ -165,15 +171,13 @@ require('seneca')({
                 protocol: "https"
             }
 
-            var callbackRESt = function(response) {
+            callRESt(messageparam, "POST", null, function(response) {
                 var pair = message.token.toLowerCase() + "_" + message.destcrypto.toLowerCase();
                 if (response && response.pairs)
                     ret.supported = pair in response.pairs;
                     
                 done(null, ret);
-            }
-
-            callRESt(messageparam, "POST", null, callbackRESt);
+            });
         } else {
             console.error("Invalid contents for message");
             done(null, ret);
@@ -212,9 +216,13 @@ require('seneca')({
             [message.txhash,message.crypto,message.amount,message.exrate,message.destcrypto,0,message.dbangkofee,message.exchangefee,0,0,message.withdrawmode,message.withdrawdestination,'none'], 
             function(err, result) {
                 if (err) {
-                    db.client.end();
                     console.error(err);
+                    db.client.end();
+                    db.client = null;
+                    db.status = "disconnected";
+                    connectToDb("executeEx");
                     done(null, ret);
+                    return;
                 }
             });
             
@@ -241,7 +249,11 @@ require('seneca')({
                 if (err) {
                     console.error(err);
                     db.client.end();
+                    db.client = null;
+                    db.status = "disconnected";
+                    connectToDb("getTWStatus");
                     done(null, ret);
+                    return;
                 }
                 
                 done (null, result[0]);
@@ -305,8 +317,11 @@ callYobitTapi(tapiConfig, 'getInfo', null, function(inforesp) {
         ['pending',message.txhash], 
         function(err, result) {
             if (err) {
-                db.client.end();
                 console.error(err);
+                db.client.end();
+                db.client = null;
+                db.status = "disconnected";
+                connectToDb("getInfo(pending)");
                 return;
             }
         });
@@ -351,8 +366,11 @@ callYobitTapi(tapiConfig, 'getInfo', null, function(inforesp) {
             ['rpending',message.txhash], 
             function(err, result) {
                 if (err) {
-                    db.client.end();
                     console.error(err);
+                    db.client.end();
+                    db.client = null;
+                    db.status = "disconnected";
+                    connectToDb("getInfo(rpending)");
                     return;
                 }
             });
@@ -378,8 +396,11 @@ var tradeSell = function(message) {
             ['tsuccess',message.txhash], 
             function(err, result) {
                 if (err) {
-                    db.client.end();
                     console.error(err);
+                    db.client.end();
+                    db.client = null;
+                    db.status = "disconnected";
+                    connectToDb("Trade(tsuccess)");
                     return;
                 }
             });
@@ -396,8 +417,11 @@ var tradeSell = function(message) {
             ['tfail',message.txhash], 
             function(err, result) {
                 if (err) {
-                    db.client.end();
                     console.error(err);
+                    db.client.end();
+                    db.client = null;
+                    db.status = "disconnected";
+                    connectToDb("Trade(tfail)");
                     return;
                 }
             });
@@ -441,8 +465,11 @@ callYobitTapi(tapiConfig, 'OrderInfo', orderInfoParams, function(orderinforesp) 
                 [examount,withdrawamount,dbangkosavings,'wsuccess',message.txhash], 
                 function(err, result) {
                     if (err) {
-                        db.client.end();
                         console.error(err);
+                        db.client.end();
+                        db.client = null;
+                        db.status = "disconnected";
+                        connectToDb("WithdrawCoinsToAddress(wsuccess)");
                         return;
                     }
                 });
@@ -452,8 +479,11 @@ callYobitTapi(tapiConfig, 'OrderInfo', orderInfoParams, function(orderinforesp) 
                 ['wfail',message.txhash], 
                 function(err, result) {
                     if (err) {
-                        db.client.end();
                         console.error(err);
+                        db.client.end();
+                        db.client = null;
+                        db.status = "disconnected";
+                        connectToDb("WithdrawCoinsToAddress(wfail)");
                         return;
                     }
                 });
@@ -473,8 +503,11 @@ callYobitTapi(tapiConfig, 'OrderInfo', orderInfoParams, function(orderinforesp) 
             ['wfail',message.txhash], 
             function(err, result) {
                 if (err) {
-                    db.client.end();
                     console.error(err);
+                    db.client.end();
+                    db.client = null;
+                    db.status = "disconnected";
+                    connectToDb("OrderInfo(wfail)");
                     return;
                 }
             });
@@ -595,6 +628,9 @@ var callYobitTapi = function(config, method, methodparams, callback) {
         if (err) {
             console.error(err);
             db.client.end();
+            db.client = null;
+            b.status = "disconnected";
+            connectToDb("nonce(select)");
             return;
         }
         
@@ -610,8 +646,12 @@ var callYobitTapi = function(config, method, methodparams, callback) {
             [++config.nonce,config.id], 
             function(err, res) {
                 if (err) {
-                    db.client.end();
                     console.error(err);
+                    db.client.end();
+                    db.client = null;
+                    b.status = "disconnected";
+                    connectToDb("nonce(update)");
+                    return;
                 }
             });
         } else {
