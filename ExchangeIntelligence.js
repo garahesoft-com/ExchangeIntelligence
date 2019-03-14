@@ -17,7 +17,7 @@ function connectToDb(invoker) {
 }connectToDb("initial");
 
 //Consts
-const DBANGKOFEE = 0.002; //DBangko fee is 0.2% right now
+const APPFEE = 0.000; //Put the fee you want to charge for your app here
 const RETRYLIMIT = 10; //The number of times to retry on failed operations
 
 //Env variables
@@ -90,7 +90,7 @@ require('seneca')({
 .add(
     {cmd: "exFee"},
     function(message, done) {
-        var ret = {dbangkofee: DBANGKOFEE};
+        var ret = {appfee: APPFEE};
         if (message && message.pair) {
             var messageparam = {
                 host: "yobit.io",
@@ -101,7 +101,6 @@ require('seneca')({
             callRESt(messageparam, "POST", null, function(response) {
                 if (response && response.fee_seller) {
                     ret.percentagefee = response.fee_seller / 100;
-                    //ret.dbangkofee = DBANGKOFEE; 
                 }
 
                 done(null, ret);
@@ -194,7 +193,7 @@ require('seneca')({
         //amount: <amount>,
         //txhash: hash,
         //exrate: rate,
-        //dbangkofee: fee,
+        //appfee: fee,
         //exchangefee: fee,
         //withdrawdestination: destination,
         //withdrawmode: mode
@@ -206,14 +205,14 @@ require('seneca')({
             && message.amount
             && message.destcrypto
             && message.exrate
-            && message.dbangkofee
+            && message.appfee
             && message.exchangefee
             && message.withdrawmode
             && message.withdrawdestination
             && db.status == "connected") {
             
-            db.client.query("INSERT INTO transactions(txhash,srccoin,srcamount,exchangerate,destcoin,destamount,dbangkofee,exchangefee,withdrawamount,dbangkosavings,destmode,destaddress,withdrawstatus) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", 
-            [message.txhash,message.crypto,message.amount,message.exrate,message.destcrypto,0,message.dbangkofee,message.exchangefee,0,0,message.withdrawmode,message.withdrawdestination,'none'], 
+            db.client.query("INSERT INTO transactions(txhash,srccoin,srcamount,exchangerate,destcoin,destamount,appfee,exchangefee,withdrawamount,mysavings,destmode,destaddress,withdrawstatus) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", 
+            [message.txhash,message.crypto,message.amount,message.exrate,message.destcrypto,0,message.appfee,message.exchangefee,0,0,message.withdrawmode,message.withdrawdestination,'none'], 
             function(err, result) {
                 if (err) {
                     console.error(err);
@@ -443,12 +442,12 @@ callYobitTapi(tapiConfig, 'OrderInfo', orderInfoParams, function(orderinforesp) 
         examount = formatDecimal(examount, message.destcrypto, false);
         //var exchangefee = examount * message.exchangefee;
         //exchangefee = formatDecimal(exchangefee, message.destcrypto);
-        var dbangkofee = examount * message.dbangkofee; // take the dbangko fee
-        //dbangkofee = formatDecimal(dbangkofee, message.destcrypto);
-        var withdrawamount = examount - (/*exchangefee +*/ dbangkofee);
+        var appfee = examount * message.appfee; // take the fee you want to charge for them using your app
+        //appfee = formatDecimal(appfee, message.destcrypto);
+        var withdrawamount = examount - (/*exchangefee +*/ appfee);
         withdrawamount = formatDecimal(withdrawamount, message.destcrypto, false);
-        var dbangkosavings = (examount - withdrawamount) /*+ exchangefee*/;
-        dbangkosavings = formatDecimal(dbangkosavings, message.destcrypto, true);
+        var mysavings = (examount - withdrawamount) /*+ exchangefee*/;
+        mysavings = formatDecimal(mysavings, message.destcrypto, true);
         
         var withdrawParams = {
             coinName: message.destcrypto,
