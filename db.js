@@ -1,6 +1,6 @@
 /*****************************************************
-* Copyright (c) 2018, Gerald Selvino 
-* <gerald.selvino@protonmail.com> All rights reserved.
+* Copyright (c) 2019, GaraheSoft 
+* <support@garahesoft.com> All rights reserved.
 *
 * This is the database setup & connection file. 
 * Compatible for MySQL and MariaDB.

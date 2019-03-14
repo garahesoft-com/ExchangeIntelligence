@@ -1,3 +1,13 @@
+/*****************************************************
+* Copyright (c) 2019, GaraheSoft 
+* <support@garahesoft.com> All rights reserved.
+*
+* These are collections of microservices, for trading
+* operations to cryptocurrency exchanges.
+* Supported exchanges:
+* -yobit.io 
+******************************************************/
+
 var querystring = require('querystring');
 var https = require('https');
 var http = require('http');
