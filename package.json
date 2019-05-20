@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "",
   "main": "ExchangeIntelligence.js",
-  "author": "DBangko.com",
-  "license": "Proprietory",
+  "author": "GaraheSoft",
+  "license": "MIT",
   "scripts": {
     "start": "node ExchangeIntelligence.js",
     "test": "node test/test.js"
